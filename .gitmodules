@@ -1,0 +1,12 @@
+[submodule "5/1"]
+	path = 5/1
+	url = https://github.com/gamehunt/ParallelFactorial
+[submodule "1"]
+	path = 1
+	url = https://github.com/gamehunt/ParallelFactorial
+[submodule "2"]
+	path = 2
+	url = https://github.com/gamehunt/ParallelDeterminant
+[submodule "3"]
+	path = 3
+	url = https://github.com/gamehunt/ParallelSync
