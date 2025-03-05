@@ -25,13 +25,16 @@
 #define CELL_SIZE 4
 
 int rows, cols;
-char** field;
-char** field_copy;
+char**  field1;
+char**  field2;
+char*** fields[2] = {&field1, &field2};
+int active_field = 0;
 
 void print_field(cv::Mat& image, long iteration_time) {
     image = cv::Scalar(0, 0, 0);
     const cv::Scalar color(255, 255, 255);
     int alive = 0;
+    char** field = *fields[active_field];
     for(int i = 0; i < rows; i++) {
         for(int j = 0; j < cols; j++) {
             if(field[i][j] == ALIVE) {
@@ -40,11 +43,11 @@ void print_field(cv::Mat& image, long iteration_time) {
             }  
         }
     }
-    std::string text = "ALIVE: " + std::to_string(alive) + " | Iteration time: " + std::to_string(iteration_time) + "ms";
+    std::string text = "ALIVE: " + std::to_string(alive) + " | Iteration time: " + std::to_string(iteration_time) + "mcs";
     cv::putText(image, text, cv::Point(0, FIELD_SIZE * CELL_SIZE + 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0));
 }
 
-int count_alive_neibourghs(int x, int y) {
+int count_alive_neibourghs(char** field, int x, int y) {
     int r = 0;
     for(int i = -1; i <= 1; i++) {
         for(int j = -1; j <= 1; j++) {
@@ -64,11 +67,13 @@ int count_alive_neibourghs(int x, int y) {
 }
 
 void turn() {
+    char** field      = *fields[active_field];
+    char** field_copy = *fields[active_field == 0 ? 1 : 0];
 #pragma omp parallel for
     for(int t = 0; t < rows * cols; t++) {
         int i = t / cols;
         int j = t % cols;
-        int alive_n = count_alive_neibourghs(j, i);
+        int alive_n = count_alive_neibourghs(field, j, i);
         if(field[i][j] == ALIVE) {
             if(alive_n > 3) {
                 field_copy[i][j] = DEAD;
@@ -83,10 +88,11 @@ void turn() {
             field_copy[i][j] = DEAD;
         }
     }
-#pragma omp parallel for
-    for(int i = 0; i < rows; i++) {
-        memcpy(field[i], field_copy[i], cols);
-    }
+// #pragma omp parallel for
+//     for(int i = 0; i < rows; i++) {
+//         memcpy(field[i], field_copy[i], cols);
+//     }
+    active_field = active_field ? 0 : 1;
 }
 
 int main() {
@@ -99,16 +105,16 @@ int main() {
 
     rows = cols = FIELD_SIZE;
 
-    field = new char*[rows];
-    field_copy = new char*[rows];
+    field1 = new char*[rows];
+    field2 = new char*[rows];
     for(int i = 0; i < rows; i++) {
-        field[i] = new char[cols];
-        field_copy[i] = new char[cols];
+        field1[i] = new char[cols];
+        field2[i] = new char[cols];
 #ifndef RANDOMIZE_FIELD
         memset(field[i], DEAD, cols);
 #else
         for(int j = 0; j < cols; j++) {
-            field[i][j] = std::rand() % 2 ? DEAD : ALIVE;
+            field1[i][j] = std::rand() % 2 ? DEAD : ALIVE;
         }
 #endif
     }
