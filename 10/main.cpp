@@ -1,8 +1,10 @@
 #include <chrono>
 #include <cstring>
 #include <cstdlib>
-#include <ncurses.h>
 #include <omp.h>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
 
 #define PERF_START(id) \
     auto start_##id = std::chrono::high_resolution_clock::now();
@@ -19,23 +21,27 @@
 #define ALIVE '#'
 #define RANDOMIZE_FIELD 1
 
+#define FIELD_SIZE 200
+#define CELL_SIZE 4
+
 int rows, cols;
 char** field;
 char** field_copy;
 
-void print_field(long iteration_time) {
-    clear();
+void print_field(cv::Mat& image, long iteration_time) {
+    image = cv::Scalar(0, 0, 0);
+    const cv::Scalar color(255, 255, 255);
     int alive = 0;
-    for(int i = 0; i < rows - 1; i++) {
+    for(int i = 0; i < rows; i++) {
         for(int j = 0; j < cols; j++) {
             if(field[i][j] == ALIVE) {
                 alive++;
-            }
-            mvaddch(i, j, field[i][j]);
+                cv::rectangle(image, cv::Point(j * CELL_SIZE, i * CELL_SIZE), cv::Point(j * CELL_SIZE + CELL_SIZE - 1, i * CELL_SIZE + CELL_SIZE - 1), color, -1);
+            }  
         }
     }
-    mvprintw(rows - 1, 0, "ALIVE CELLS: %d | ITERATION TIME: %ldms", alive, iteration_time);
-    refresh();
+    std::string text = "ALIVE: " + std::to_string(alive) + " | Iteration time: " + std::to_string(iteration_time) + "ms";
+    cv::putText(image, text, cv::Point(0, FIELD_SIZE * CELL_SIZE + 30), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(0, 255, 0));
 }
 
 int count_alive_neibourghs(int x, int y) {
@@ -86,10 +92,12 @@ void turn() {
 int main() {
     omp_set_num_threads(THREAD_AMOUNT);
 
-    initscr();
-    halfdelay(5);
+    // initscr();
+    // halfdelay(5);
+    //
+    // getmaxyx(stdscr, rows, cols);
 
-    getmaxyx(stdscr, rows, cols);
+    rows = cols = FIELD_SIZE;
 
     field = new char*[rows];
     field_copy = new char*[rows];
@@ -113,13 +121,18 @@ int main() {
     field[2][2] = ALIVE;
 #endif
 
-    while(getch() != 27) {
+    cv::Mat image(FIELD_SIZE*CELL_SIZE + 50, FIELD_SIZE*CELL_SIZE, CV_8UC3, cv::Scalar(0, 0, 0));
+    while(true) {
         PERF_START(i);
         turn();
         PERF_END(i);
-        print_field(PERF_RESULT(i));
+        print_field(image, PERF_RESULT(i));
+        imshow("root", image);
+        int key = cv::waitKey(300);
+        if(key == 27) {
+            break;
+        }
     }
 
-    endwin();
     return 0;
 }
