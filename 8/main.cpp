@@ -104,6 +104,8 @@ matrix generate(int r, int c) {
 }
 
 int main() {
+    omp_set_num_threads(4);
+
     srand(time(0));
 
     matrix first  = generate(10e3, 10e3);
